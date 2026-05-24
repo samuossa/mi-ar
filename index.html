@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mi AR Portfolio</title>
+
+    <!-- MindAR + Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: black;
+      }
+      #container {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+      #instrucciones {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        z-index: 999;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="instrucciones">📷 Apunta la cámara a tu imagen objetivo</div>
+    <div id="container"></div>
+
+    <script>
+      window.addEventListener("load", async () => {
+        // Verificar que MindAR cargó correctamente
+        if (!window.MINDAR || !window.MINDAR.IMAGE) {
+          alert("Error: MindAR no cargó. Verifica tu conexión a internet.");
+          return;
+        }
+
+        const { MindARThree } = window.MINDAR.IMAGE;
+
+        // Inicializar MindAR
+        const mindarThree = new MindARThree({
+          container: document.getElementById("container"),
+          imageTargetSrc: "./targets.mind",
+        });
+
+        const { renderer, scene, camera } = mindarThree;
+
+        // Luz para que se vean bien los objetos
+        const luz = new THREE.AmbientLight(0xffffff, 1);
+        scene.add(luz);
+
+        const luzDireccional = new THREE.DirectionalLight(0xffffff, 0.5);
+        luzDireccional.position.set(0, 1, 1);
+        scene.add(luzDireccional);
+
+        // ---- OBJETO 1: Cubo giratorio ----
+        const anchor1 = mindarThree.addAnchor(0);
+
+        const geometriaCubo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+        const materialCubo = new THREE.MeshNormalMaterial();
+        const cubo = new THREE.Mesh(geometriaCubo, materialCubo);
+        cubo.position.set(-0.1, 0, 0);
+        anchor1.group.add(cubo);
+
+        // ---- OBJETO 2: Esfera con color ----
+        const geometriaEsfera = new THREE.SphereGeometry(0.05, 32, 32);
+        const materialEsfera = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+        const esfera = new THREE.Mesh(geometriaEsfera, materialEsfera);
+        esfera.position.set(0.1, 0, 0);
+        anchor1.group.add(esfera);
+
+        // ---- OBJETO 3: Texto en pantalla (aparece al detectar imagen) ----
+        anchor1.onTargetFound = () => {
+          document.getElementById("instrucciones").innerText =
+            "✅ ¡Imagen detectada! Mueve el dispositivo";
+        };
+
+        anchor1.onTargetLost = () => {
+          document.getElementById("instrucciones").innerText =
+            "📷 Apunta la cámara a tu imagen objetivo";
+        };
+
+        // ---- Animación ----
+        const clock = new THREE.Clock();
+        renderer.setAnimationLoop(() => {
+          const delta = clock.getDelta();
+
+          // Girar el cubo
+          cubo.rotation.x += delta * 1.5;
+          cubo.rotation.y += delta * 1.5;
+
+          // Hacer que la esfera suba y baje
+          esfera.position.y = Math.sin(clock.getElapsedTime() * 2) * 0.05;
+
+          renderer.render(scene, camera);
+        });
+
+        // Iniciar cámara AR
+        await mindarThree.start();
+      });
+    </script>
+  </body>
+</html>
